@@ -13,19 +13,22 @@ export default {
 	data() {
 		return {
 			textValue: '',
-			imgData: ''
+			imgData: '',
+			title:'',
 		};
 	},
 	mounted() {
 		ipcRenderer.on('new', (e, action) => {
 			//监听新建文件事件
 			this.textValue = '';
-			document.title = action;
+			document.title = `WEditor ${action}`;
+			this.title=document.title
 		});
 		ipcRenderer.on('open', (e, action) => {
 			//监听打开文件事件
 			this.textValue = action.content.toString();
-			document.title = action.path;
+			document.title = `WEditor ${action.path}`;
+			this.title=document.title
 		});
 		ipcRenderer.on('menuItemSave', (e, action) => {
 			//监听菜单栏保存按键事件
@@ -36,7 +39,6 @@ export default {
 		});
 	},
 	methods: {
-
 		onPaste(e) {
 			//图片复制的相关操作，
 			let _this = this;
@@ -45,7 +47,6 @@ export default {
 			}
 			for (var i = 0, len = e.clipboardData.items.length; i < len; i++) {
 				var item = e.clipboardData.items[i];
-
 				if (item.kind === 'file') {
 					var pasteFile = item.getAsFile();
 					var reader = new FileReader();
@@ -68,6 +69,7 @@ export default {
 		onSave() {
 			//快捷键 ctrl+s保存事件
 			// console.log(this.textValue)
+			document.title=this.title+'   已保存   '
 			ipcRenderer.send('save', this.textValue);
 		}
 	},
@@ -76,6 +78,7 @@ export default {
 
 		// }
 		textValue() {
+			document.title=this.title+'   正在编辑...   '
 			this.$refs.outputText.innerHTML = marked(this.textValue).replace(/%5C/g, '\\');
 		}
 	}

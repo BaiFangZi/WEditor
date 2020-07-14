@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import {
 	dialog,
-	ipcMain,
+	// ipcMain,
 } from 'electron'
 // import cmd from './cmd.js';
 const exec = require('child_process').exec;
@@ -12,62 +12,32 @@ const exec = require('child_process').exec;
 let fileName = ''
 const basePath = 'E:/Notes'
 export function createNewFile(callback) {
-	const baseUrl = 'E:/myblog'
-	prompt({
-			title: '创建文件',
-			label: '文件名:',
-			value: 'new-file',
-			buttonLabels: {
-				ok: '确定',
-				cancel: '取消',
-
-			},
-			// inputAttrs: {
-			// 	type: 'url'
-			// },
-			type: 'input'
-		}, )
-		.then((r) => {
-			if (r === null) {
-				console.log('user cancelled');
-			} else {
-				fileName = r
-				// this.filePath = `E:/myblog/source/_posts/${r}.md`
-				// fs.access(path.join('E:/myblog/source/_posts', `${r}.md`), (err) => {
-				fs.access(`${basePath}/${r}.md`, (err) => {
-					try {
-						if (err.code == 'ENOENT') {
-							fs.writeFile(`${basePath}/${r}.md`, '', err => {
-								if (err) {
-									console.log(err)
-								}
-							})
-							fs.mkdir(`${basePath}/${r}`, function(err) {
-								if (err) {
-									console.log(err);
-								} else {
-									console.log("creat done!");
-								}
-							})
-							if (typeof callback === "function") {
-								//alert(callback);
-								callback(`${basePath}/${r}.md`);
-							}
-
-						}
-
-					} catch (err) {
-						dialog.showErrorBox('错误', '检查命名重复！')
-					}
-				});
+	// const baseUrl = 'E:/myblog'
+	dialog.showSaveDialog({
+		title: '选择md文件保存路径',
+	}, (filePath) => {
+		if (filePath) {
+			fileName = path.basename(filePath, '.md')
+			fs.writeFile(filePath, '', err => {
+				if (err) {
+					console.log(err)
+				}
+			})
+			fs.mkdir(path.join(path.dirname(filePath), path.basename(filePath, '.md')), function(err) {
+				if (err) {
+					console.log(err);
+				}
+			})
+			if (typeof callback === "function") {
+				callback(filePath);
 			}
-		})
-		.catch(console.error);
+		} else {
+			return false
+		}
+
+	})
 }
-
-
 export function saveFile(text) {
-
 	fs.writeFile(`E:/Notes/${fileName}.md`, text, err => {
 		if (err) {
 			console.log(err)
@@ -114,7 +84,6 @@ export function quit(callback) {
 }
 export function createImgFile(imgBase64, index) {
 	// const imgPath = `E:/myblog/source/_posts/${fileName}/post-img-${index}.png`
-
 	const imgPath = path.join(basePath, fileName, `post-img-${index}.png`)
 	const data = imgBase64.replace(/^data:image\/\w+;base64,/, "")
 	var dataBuffer = new Buffer(data, 'base64'); //把base64码转成buffer对象，
