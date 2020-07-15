@@ -9,27 +9,28 @@ import {
 const exec = require('child_process').exec;
 
 // export const filePath = ''
-let fileName = ''
-const basePath = 'E:/Notes'
+let filePath = ''
+
 export function createNewFile(callback) {
 	// const baseUrl = 'E:/myblog'
 	dialog.showSaveDialog({
 		title: '选择md文件保存路径',
-	}, (filePath) => {
-		if (filePath) {
-			fileName = path.basename(filePath, '.md')
-			fs.writeFile(filePath, '', err => {
+	}, (p) => {
+		if (p) {
+			filePath = p
+
+			fs.writeFile(p, '', err => {
 				if (err) {
 					console.log(err)
 				}
 			})
-			fs.mkdir(path.join(path.dirname(filePath), path.basename(filePath, '.md')), function(err) {
+			fs.mkdir(path.join(path.dirname(p), path.basename(p, '.md')), function(err) {
 				if (err) {
 					console.log(err);
 				}
 			})
 			if (typeof callback === "function") {
-				callback(filePath);
+				callback(p);
 			}
 		} else {
 			return false
@@ -38,35 +39,46 @@ export function createNewFile(callback) {
 	})
 }
 export function saveFile(text) {
-	fs.writeFile(`E:/Notes/${fileName}.md`, text, err => {
-		if (err) {
-			console.log(err)
-		}
-	})
+	if (filePath == '') {
+		createNewFile(() => {
+			fs.writeFile(filePath, text, err => {
+				if (err) {
+					console.log(err)
+				}
+			})
+		})
+	} else {
+		fs.writeFile(filePath, text, err => {
+			if (err) {
+				console.log(err)
+			}
+		})
+	}
+
 }
 
-export function openFile() {
-	const [path] = dialog.showOpenDialog({
-		filters: [{
-			name: '文本文件',
-			extensions: ['json', 'js', 'html', 'css', 'md'],
-		}, {
-			name: '所有文件',
-			extensions: ['*'],
-		}],
-		properties: ['openFile', 'createDirectory'],
-	})
-	if (path) {
-		// return path
-		const content = fs.readFileSync(path)
+export function openFile(callback) {
 
-		return {
-			content,
-			path
+
+	dialog.showOpenDialog({}, (p) => {
+		if (p) {
+
+			filePath = p[0]
+			// console.log(p)
+			let content = fs.readFileSync(filePath)
+			if (typeof callback === "function") {
+				callback({
+					content,
+					filePath
+				});
+			}
+		} else {
+			// dialog.showErrorBox('错误', '打开文件出错！')
+			return false
 		}
-	} else {
-		dialog.showErrorBox('错误', '打开文件出错！')
-	}
+	})
+
+
 }
 export function quit(callback) {
 	const result = dialog.showMessageBox({
@@ -84,10 +96,9 @@ export function quit(callback) {
 }
 export function createImgFile(imgBase64, index) {
 	// const imgPath = `E:/myblog/source/_posts/${fileName}/post-img-${index}.png`
-	const imgPath = path.join(basePath, fileName, `post-img-${index}.png`)
+	const imgPath = path.join(path.dirname(filePath), path.basename(filePath, '.md'), `post-img-${index}.png`)
 	const data = imgBase64.replace(/^data:image\/\w+;base64,/, "")
 	var dataBuffer = new Buffer(data, 'base64'); //把base64码转成buffer对象，
 	fs.writeFileSync(imgPath, dataBuffer)
 	return imgPath
 }
-//<img src="file:\\E:\myblog\source\_posts\abcddd\post-img-1.png" alt="文本">
