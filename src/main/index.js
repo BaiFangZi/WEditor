@@ -2,42 +2,47 @@ import {
 	app,
 	BrowserWindow,
 	Menu,
-	ipcMain
+	ipcMain,
+	dialog
 } from 'electron'
-import {
-	createNewFile,
-	saveFile,
-	openFile,
-	createImgFile,
-	quit,
-} from './module/fileOperations.js'
 
 
-let mainWindow
-let i = 1
+
+let mainWindow //窗体对象
+let i = 1 //img图片后标，
+
 const menuTemplate = [{
 	label: '文件',
 	submenu: [{
 			label: '新建',
 			// accelerator: 'Cmd+N',
 			click() {
-				createNewFile((e) => {
-					mainWindow.webContents.send('new', e)
-				})
+				dialog.showSaveDialog({
+					title: '选择文件保存路径',
+				}, (p) => {
+					if (p) {
+						mainWindow.webContents.send('new', p)
+					}
 
+				})
 			}
 		}, {
 			label: '打开',
 			// accelerator: 'Cmd+O',
 			click() {
-				const file = openFile()
-				mainWindow.webContents.send('open', file)
+				dialog.showOpenDialog({}, (p) => {
+					if (p) {
+						mainWindow.webContents.send('open', p)
+					}
+				})
+				// const file = openFile()
+				// mainWindow.webContents.send('open', file)
 			},
 		}, {
 			label: '保存',
 			click() {
 				// console.log(mainWindow.webContents.sendSync)
-				mainWindow.webContents.send('menuItemSave')
+				mainWindow.webContents.send('save')
 			}
 			// accelerator: 'Cmd+S',
 
@@ -47,12 +52,13 @@ const menuTemplate = [{
 		}, {
 			label: '退出',
 			click() {
+				mainWindow.webContents.send('quit')
 				// console.log(mainWindow.webContents)
 
 				// saveFile(text)
-				quit(() => {
-					mainWindow.webContents.send('quit')
-				})
+				// quit(() => {
+				// 
+				// })
 
 			}
 			// role: 'quit',
@@ -92,20 +98,20 @@ function createWindow() {
 	})
 
 	mainWindow.loadURL(winURL)
-	// mainWindow.webContents.openDevTools()
-	mainWindow.on('closed', () => {
-		mainWindow = null
+	mainWindow.webContents.openDevTools()
+	mainWindow.on('close', (e) => {
+		e.preventDefault(); //阻止默认行为，一定要有
+		mainWindow.webContents.send('quit')
 	})
-
 }
 
 app.on('ready', createWindow)
 
-app.on('window-all-closed', () => {
-	if (process.platform !== 'darwin') {
-		app.quit()
-	}
-})
+// app.on('window-all-closed', () => {
+// 	if (process.platform !== 'darwin') {
+// 		app.quit()
+// 	}
+// })
 
 app.on('activate', () => {
 	if (mainWindow === null) {
@@ -116,12 +122,35 @@ app.on('activate', () => {
 
 
 
-ipcMain.on('paste', (e, action) => {
-	// const path=createImgFile(action, i++)
-	const path = createImgFile(action, i++)
-	e.sender.send('render-img', path)
+// ipcMain.on('paste', (e, action) => {
+// 	// const path=createImgFile(action, i++)
+// 	const path = createImgFile(action, i++)
+// 	e.sender.send('render-img', path)
 
+// })
+ipcMain.on('CtrlS', (event, action) => {
+
+	event.sender.send('CtrlS-Reply', action);
 })
-ipcMain.on('save', (e, action) => {
-	saveFile(action)
+ipcMain.on('quit-reply', (event, action) => {
+	
+	switch (action) {
+		case 0:
+			break;
+		case 1:
+			{
+				mainWindow = null
+				app.exit()
+			}
+			break;
+		case 2:
+			{
+				mainWindow = null
+				app.exit()
+			}
+			break;
+	}
+	// event.sender.send('CtrlS-Reply', action);
 })
+
+// CtrlS-Reply

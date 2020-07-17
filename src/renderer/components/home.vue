@@ -7,6 +7,15 @@
 
 <script>
 import marked from 'marked';
+// import {
+// 	createNewFile,
+// 	saveFile,
+// 	openFile,
+// 	createImgFile,
+// 	quit,
+// } from '@/utils/fileOperations.js'
+// import File from '@/utils/communicate.js';
+import { createImgFile } from '@/utils/fileOperations.js';
 import { ipcRenderer } from 'electron';
 export default {
 	name: 'home',
@@ -14,30 +23,25 @@ export default {
 		return {
 			textValue: '',
 			imgData: '',
-			title:'',
+			imgID: 0
+			// title: ''
 		};
 	},
 	mounted() {
-		ipcRenderer.on('new', (e, action) => {
-			//监听新建文件事件
-			this.textValue = '';
-			document.title = `WEditor ${action}`;
-			this.title=document.title
-		});
-		ipcRenderer.on('open', (e, action) => {
-			//监听打开文件事件
-			this.textValue = action.content.toString();
-			document.title = `WEditor ${action.path}`;
-			this.title=document.title
-		});
-		ipcRenderer.on('menuItemSave', (e, action) => {
-			//监听菜单栏保存按键事件
-			this.onSave();
-		});
-		ipcRenderer.on('quit', (e, action) => {
-			this.onSave();
-		});
+		this.$store.commit('setPath', '');
+		this.$store.commit('setValue', '');
+		this.$store.commit('setSaveFlag', true);
+		setInterval(() => {
+			if (this.$store.state.filePath) {
+				this.onSave();
+			}
+		}, 1000 * 30);
+		// document.title = `WEditor ${this.$store.state.filePath} 已保存`;
+		// console.log(this.$store.state.saveFlag);
+		// console.log(this.$store.state.filePath);
+		// console.log(this.$store.state.textValue);
 	},
+
 	methods: {
 		onPaste(e) {
 			//图片复制的相关操作，
@@ -45,40 +49,66 @@ export default {
 			if (!(e.clipboardData && e.clipboardData.items)) {
 				return;
 			}
-			for (var i = 0, len = e.clipboardData.items.length; i < len; i++) {
-				var item = e.clipboardData.items[i];
-				if (item.kind === 'file') {
-					var pasteFile = item.getAsFile();
-					var reader = new FileReader();
-					reader.readAsDataURL(pasteFile);
-					reader.onload = function(e) {
-						_this.imgData = this.result;
-						ipcRenderer.send('paste', this.result);
-						ipcRenderer.once('render-img', (e, path) => {
-							path = path.toString();
-							_this.textValue += `![文本](${path})`;
-							// console.log(action)
-							// _this.$refs.outputText.innerHTML += `<img src="${action}" alt="">`;
-						});
-						// _this.onChange();
-						// console.log(this.result);
-					};
-				}
+			const item = e.clipboardData.items[0];
+			if (item.kind === 'file') {
+				var pasteFile = item.getAsFile();
+				var reader = new FileReader();
+				reader.readAsDataURL(pasteFile);
+				reader.onload = function(e) {
+					const path = createImgFile(this.result, _this.$store.state.filePath, _this.imgID++);
+					_this.textValue += `![文本](${path})`;
+					// _this.$store.commit('setImgBuffer', this.result);
+
+					// _this.imgData = this.result;
+
+					// ipcRenderer.send('paste-img', this.result);
+
+					// ipcRenderer.once('render-img', (e, path) => {
+					// 	path = path.toString();
+
+					// 	// console.log(action)
+					// 	// _this.$refs.outputText.innerHTML += `<img src="${action}" alt="">`;
+					// });
+					// _this.onChange();
+					// console.log(this.result);
+				};
 			}
 		},
 		onSave() {
 			//快捷键 ctrl+s保存事件
-			// console.log(this.textValue)
-			document.title=this.title+'   已保存   '
-			ipcRenderer.send('save', this.textValue);
+			// document.title = this.title + '   已保存   ';
+
+			ipcRenderer.send('CtrlS', this.textValue);
+			// document.title = `WEditor ${this.$store.state.filePath} 正在编辑`;
 		}
 	},
 	watch: {
-		// data(newValue, oldValue) {
+		'$store.state.textValue': function(newValue, oldValue) {
+			this.textValue = this.$store.state.textValue;
+		},
 
-		// }
-		textValue() {
-			document.title=this.title+'   正在编辑...   '
+		'$store.state.saveFlag': function(newValue, oldValue) {
+			if (newValue) {
+				document.title = `WEditor ${this.$store.state.filePath}  `;
+			} else {
+				if (this.$store.state.filePath == '') {
+					document.title = `WEditor new-file 正在编辑...`;
+				} else {
+					document.title = `WEditor ${this.$store.state.filePath} 正在编辑...`;
+				}
+			}
+			// console.log(111);
+		},
+		// '$store.state.filePath':function(newValue, oldValue){
+		// 	if(newValue){
+		// 		this.onSave()
+		// 	}
+		// },
+		textValue(newValue, oldValue) {
+			// console.log('change');
+			// document.title = `WEditor ${this.$store.state.filePath} 正在编辑`;
+			this.$store.commit('setValue', newValue);
+			this.$store.commit('setSaveFlag', false);
 			this.$refs.outputText.innerHTML = marked(this.textValue).replace(/%5C/g, '\\');
 		}
 	}
