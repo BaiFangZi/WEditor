@@ -98,7 +98,7 @@ function createWindow() {
 	})
 
 	mainWindow.loadURL(winURL)
-	mainWindow.webContents.openDevTools()
+	//mainWindow.webContents.openDevTools()
 	mainWindow.on('close', (e) => {
 		e.preventDefault(); //阻止默认行为，一定要有
 		mainWindow.webContents.send('quit')
