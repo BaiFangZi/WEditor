@@ -12,16 +12,16 @@ Vue.use(Vuex)
 
 const state = {
 	// main: 0
-	textValue: '',
+	// textValue: '',
 	filePath: '',
 	saveFlag: true,
 	// imgBuffer: [],
 }
 
 const mutations = {
-	setValue(state, value) {
-		state.textValue = value
-	},
+	// setValue(state, value) {
+	// 	state.textValue = value
+	// },
 	setPath(state, value) {
 		state.filePath = value
 	},

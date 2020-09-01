@@ -1,148 +1,138 @@
 <template>
-	<div class="wrapper">
-		<div><textarea class="content input" name="" id="" v-model="textValue" @paste="onPaste" @keyup.ctrl.83="onSave"></textarea></div>
-		<div ref="outputText" class="content output" @paste="onPaste"></div>
-	</div>
+  <div id="editor"></div>
 </template>
 
 <script>
-import marked from 'marked';
-// import {
-// 	createNewFile,
-// 	saveFile,
-// 	openFile,
-// 	createImgFile,
-// 	quit,
-// } from '@/utils/fileOperations.js'
-// import File from '@/utils/communicate.js';
-import { createImgFile } from '@/utils/fileOperations.js';
-import { ipcRenderer } from 'electron';
+import "codemirror/lib/codemirror.css"; // codemirror
+import "tui-editor/dist/tui-editor.css"; // editor ui
+import "tui-editor/dist/tui-editor-contents.css"; // editor content
+
+import Editor from "tui-editor";
+
+import {
+  createImgFile,
+  openFile,
+  saveFile,
+  quit,
+} from "@/utils/fileOperations.js";
+import { ipcRenderer } from "electron";
 export default {
-	name: 'home',
-	data() {
-		return {
-			textValue: '',
-			imgData: '',
-			imgID: 0
-			// title: ''
-		};
-	},
-	mounted() {
-		this.$store.commit('setPath', '');
-		this.$store.commit('setValue', '');
-		this.$store.commit('setSaveFlag', true);
-		setInterval(() => {
-			if (this.$store.state.filePath) {
-				this.onSave();
-			}
-		}, 1000 * 30);
-		// document.title = `WEditor ${this.$store.state.filePath} 已保存`;
-		// console.log(this.$store.state.saveFlag);
-		// console.log(this.$store.state.filePath);
-		// console.log(this.$store.state.textValue);
-	},
+  name: "home",
+  data() {
+    return {
+      // textValue: "",
+      imgData: "",
+      imgID: 0,
+      clientHeight: window.innerHeight,
+      // title: ''
+    };
+  },
+  created() {
+    ipcRenderer.on("open", (e, filePath) => {
+      let value = openFile(filePath);
+      this.tuieditor.setValue(value);
+    });
+    ipcRenderer.on("save", (e, filePath) => {
+      saveFile(this.tuieditor.getValue());
+    });
+    ipcRenderer.on("quit", (e, filePath) => {
+      quit(this.tuieditor.getValue(), e);
+      // quit(this.tuieditor.getValue(), (result) => {
+      //   if (result != 1) {
+      //     e.sender.send("quit-reply", result);
+      //   } else {
+      //     saveFile(this.tuieditor.getValue());
+      //     e.sender.send("quit-reply", 1);
+      //   }
+      // });
+    });
+  },
+  mounted() {
+    this.initEditor();
+    window.onresize = () => {
+      document.querySelector("#editor").style.height =
+        window.innerHeight - 32 + "px";
+    };
+    this.timingSave(30); //定时保存 单位 秒
+    this.onChange();
+  },
+  destroyed() {
+    if (!this.tuieditor) return;
+    this.tuieditor.remove();
+  },
+  methods: {
+    onPaste(e) {
+      //图片复制的相关操作，
+      let _this = this;
+      if (!(e.clipboardData && e.clipboardData.items)) {
+        return;
+      }
+      const item = e.clipboardData.items[0];
+      if (item.kind === "file") {
+        var pasteFile = item.getAsFile();
+        var reader = new FileReader();
+        reader.readAsDataURL(pasteFile);
+        reader.onload = function(e) {
+          const path = createImgFile(
+            this.result,
+            _this.$store.state.filePath,
+            _this.imgID++
+          );
+          // _this.textValue += `![文本](${path})`;
+        };
+      }
+    },
+    initEditor() {
+      this.$store.commit("setPath", "");
+      // this.$store.commit("setValue", "");
+      this.$store.commit("setSaveFlag", true);
 
-	methods: {
-		onPaste(e) {
-			//图片复制的相关操作，
-			let _this = this;
-			if (!(e.clipboardData && e.clipboardData.items)) {
-				return;
-			}
-			const item = e.clipboardData.items[0];
-			if (item.kind === 'file') {
-				var pasteFile = item.getAsFile();
-				var reader = new FileReader();
-				reader.readAsDataURL(pasteFile);
-				reader.onload = function(e) {
-					const path = createImgFile(this.result, _this.$store.state.filePath, _this.imgID++);
-					_this.textValue += `![文本](${path})`;
-					// _this.$store.commit('setImgBuffer', this.result);
-
-					// _this.imgData = this.result;
-
-					// ipcRenderer.send('paste-img', this.result);
-
-					// ipcRenderer.once('render-img', (e, path) => {
-					// 	path = path.toString();
-
-					// 	// console.log(action)
-					// 	// _this.$refs.outputText.innerHTML += `<img src="${action}" alt="">`;
-					// });
-					// _this.onChange();
-					// console.log(this.result);
-				};
-			}
-		},
-		onSave() {
-			//快捷键 ctrl+s保存事件
-			// document.title = this.title + '   已保存   ';
-
-			ipcRenderer.send('CtrlS', this.textValue);
-			// document.title = `WEditor ${this.$store.state.filePath} 正在编辑`;
-		}
-	},
-	watch: {
-		'$store.state.textValue': function(newValue, oldValue) {
-			this.textValue = this.$store.state.textValue;
-		},
-
-		'$store.state.saveFlag': function(newValue, oldValue) {
-			if (newValue) {
-				document.title = `WEditor ${this.$store.state.filePath}  `;
-			} else {
-				if (this.$store.state.filePath == '') {
-					document.title = `WEditor new-file 正在编辑...`;
-				} else {
-					document.title = `WEditor ${this.$store.state.filePath} 正在编辑...`;
-				}
-			}
-			// console.log(111);
-		},
-		// '$store.state.filePath':function(newValue, oldValue){
-		// 	if(newValue){
-		// 		this.onSave()
-		// 	}
-		// },
-		textValue(newValue, oldValue) {
-			// console.log('change');
-			// document.title = `WEditor ${this.$store.state.filePath} 正在编辑`;
-			this.$store.commit('setValue', newValue);
-			this.$store.commit('setSaveFlag', false);
-			this.$refs.outputText.innerHTML = marked(this.textValue).replace(/%5C/g, '\\');
-		}
-	}
+      if (this.$el) {
+        this.tuieditor = new Editor({
+          el: document.querySelector("#editor"),
+          initialEditType: "markdown",
+          previewStyle: "vertical",
+          height: this.clientHeight - 32 + "px",
+        });
+      }
+      if (this.value) {
+        this.tuieditor.setValue(this.value);
+      }
+    },
+    timingSave(seconds) {
+      setInterval(() => {
+        if (this.$store.state.filePath) {
+          saveFile(this.tuieditor.getValue());
+          // this.onSave();
+        }
+      }, 1000 * seconds);
+    },
+    onChange() {
+      let _this = this;
+      document
+        .querySelector(".te-editor .CodeMirror textarea")
+        .addEventListener("input", function() {
+          _this.$store.commit("setSaveFlag", false);
+        });
+    },
+  },
+  watch: {
+    // "$store.state.textValue": function(newValue, oldValue) {
+    //   // this.textValue = this.$store.state.textValue;
+    // },
+    "$store.state.saveFlag": function(newValue, oldValue) {
+      if (newValue) {
+        document.title = `WEditor ${this.$store.state.filePath}  `;
+      } else {
+        if (this.$store.state.filePath == "") {
+          document.title = `WEditor new-file 正在编辑...`;
+        } else {
+          document.title = `WEditor ${this.$store.state.filePath} 正在编辑...`;
+        }
+      }
+    },
+  },
 };
 </script>
 
-<style>
-.wrapper {
-}
-.wrapper .content {
-	position: absolute;
-	background-color: #faf6e6;
-	top: 0;
-	bottom: 0;
-	width: calc(50% - 16px);
-	overflow: auto;
-	padding: 6px;
-}
-.input {
-	font-size: 16px;
-	left: 0;
-	border: none;
-	border-right: 2px solid #c3d9ff;
-	resize: none;
-	outline: none;
-	font-family: '微软雅黑';
-}
-.output {
-	right: 0;
-
-	border: none;
-	border-left: 2px solid #c3d9ff;
-}
-img {
-	display: block;
-}
-</style>
+<style></style>

@@ -17,26 +17,31 @@ const menuTemplate = [{
 			label: '新建',
 			// accelerator: 'Cmd+N',
 			click() {
+				console.log(1212)
 				dialog.showSaveDialog({
-					title: '选择文件保存路径',
-				}, (p) => {
-					if (p) {
-						mainWindow.webContents.send('new', p)
+					title: '选择文件保存路径', // 	mainWindow.webContents.send('new', p)
+				}).then(result => {
+					if (!result.canceled) {
+						mainWindow.webContents.send('new', result.filePath)
 					}
 
+				}).catch(err => {
+					console.log(err)
 				})
 			}
 		}, {
 			label: '打开',
 			// accelerator: 'Cmd+O',
 			click() {
-				dialog.showOpenDialog({}, (p) => {
-					if (p) {
-						mainWindow.webContents.send('open', p)
+				dialog.showOpenDialog().then(result => {
+					// console.log(result)
+					if (!result.canceled) {
+						mainWindow.webContents.send('open', result.filePaths[0])
 					}
+				}).catch(err => {
+					console.log(err)
 				})
-				// const file = openFile()
-				// mainWindow.webContents.send('open', file)
+
 			},
 		}, {
 			label: '保存',
@@ -88,16 +93,21 @@ function createWindow() {
 
 	Menu.setApplicationMenu(menu);
 	mainWindow = new BrowserWindow({
-		height: 563,
+		// height: 563,
+		// fullscreen: true,
+		minHeight: 500,
+		minWidth: 400,
 		useContentSize: true,
 		width: 1000,
 		webPreferences: {
-			webSecurity: false
+			webSecurity: false,
+			nodeIntegration: true
 		},
 
 	})
 
 	mainWindow.loadURL(winURL)
+	// mainWindow.maximize()
 	//mainWindow.webContents.openDevTools()
 	mainWindow.on('close', (e) => {
 		e.preventDefault(); //阻止默认行为，一定要有
@@ -133,22 +143,21 @@ ipcMain.on('CtrlS', (event, action) => {
 	event.sender.send('CtrlS-Reply', action);
 })
 ipcMain.on('quit-reply', (event, action) => {
-	
+	// console.log(1212212121)
+	// console.log(action)
 	switch (action) {
 		case 0:
 			break;
-		case 1:
-			{
-				mainWindow = null
-				app.exit()
-			}
-			break;
-		case 2:
-			{
-				mainWindow = null
-				app.exit()
-			}
-			break;
+		case 1: {
+			mainWindow = null
+			app.exit()
+		}
+		break;
+	case 2: {
+		mainWindow = null
+		app.exit()
+	}
+	break;
 	}
 	// event.sender.send('CtrlS-Reply', action);
 })
