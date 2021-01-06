@@ -54,7 +54,7 @@
     }
   },
   "dependencies": {
-    "axios": "^0.18.0",
+    "axios": "^0.21.1",
     "electron-prompt": "^1.5.1",
     "marked": "^1.1.1",
     "tui-editor": "^1.4.10",
